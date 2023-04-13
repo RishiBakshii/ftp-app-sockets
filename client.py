@@ -14,31 +14,29 @@ sending_file=None
 name=None
 textarea=None
 labelchat=None
-listbox=None
+list_box=None
 mainWindow=None
 primary_font=("calibri",10)
 
 
 def recv_message():
-    global SERVER,BUFFER_SIZE,textarea,listbox
+    global SERVER,BUFFER_SIZE,textarea,list_box
     while True:
         chunk=SERVER.recv(BUFFER_SIZE)
-        print(chunk)
         try:
             if ('tiul') in chunk.decode("utf-8") and '1.0,' not in chunk.decode("utf-8"):
                 letter_list=chunk.decode('utf-8').split(',')
                 print(letter_list)
-                listbox.insert(letter_list[0],letter_list[0]+": "+letter_list[1]+ ':' + letter_list[3] + " "+letter_list[5])
-                print(letter_list[0],letter_list[0]+": "+letter_list[1]+ ':' + letter_list[3] + " "+letter_list[5])
+                list_box.insert(letter_list[0],letter_list[0]+":"+letter_list[1]+ ':' + letter_list[3])
             else:
                 textarea.insert(END,"\n"+chunk.decode('ascii'))
                 textarea.see('end')
-                print(chunk.decode('ascii'))
         except:
             pass
 
 def show_client_list():
-    global SERVER,listbox
+    global SERVER,list_box
+    list_box.delete(0,END)
     SERVER.send("show list".encode('ascii'))
 
 def connect_server():
@@ -46,9 +44,25 @@ def connect_server():
     cname=name.get()
     SERVER.send(cname.encode("utf-8"))
 
+def connectWithClient():
+    global SERVER,list_box
+
+    list_item=list_box.get(ANCHOR).split(':')
+    # print(list_item)
+    user=list_item[1]
+    msg='connect'+user.strip()
+    SERVER.send(msg.encode("utf-8"))
+
+def disconnectWithClient():
+    list_item=list_box.get(ANCHOR).split(':')
+    # print(list_item)
+    user=list_item[1]
+    msg='disconnect'+user
+    SERVER.send(msg.encode("utf-8"))
+
 
 def openChatWindow():
-    global primary_font,name
+    global primary_font,name,list_box,textarea
     window=Tk()
     window.title("Messenger")
     window.geometry("500x350")
@@ -78,13 +92,13 @@ def openChatWindow():
     scroll_bar1.config(command=list_box.yview)
 
 
-    connect=Button(window,text='Connect',bd=1,font=primary_font)
+    connect=Button(window,text='Connect',bd=1,font=primary_font,command=connectWithClient)
     connect.place(x=280,y=160)
 
     refresh_btn=Button(window,text='Refresh',bd=1,font=primary_font,command=show_client_list)
     refresh_btn.place(x=430,y=160)
 
-    disconnect=Button(window,text='Disconnect',bd=1,font=primary_font)
+    disconnect=Button(window,text='Disconnect',bd=1,font=primary_font,command=disconnectWithClient)
     disconnect.place(x=350,y=160)
 
     labelchat=Label(window,text='Chat Window',font=primary_font)
