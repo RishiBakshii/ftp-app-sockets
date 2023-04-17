@@ -3,7 +3,12 @@ from threading import Thread
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
-
+# new
+import ftplib
+from ftplib import FTP
+import os
+import ntpath
+import time
 
 PORT  = 8080
 IP_ADDRESS = '127.0.0.1'
@@ -16,8 +21,27 @@ textarea=None
 labelchat=None
 list_box=None
 mainWindow=None
+text_msg=None
 primary_font=("calibri",10)
 
+
+def send_message():
+    global text_msg,SERVER,textarea
+    msg=text_msg.get()
+
+    SERVER.send(msg.encode("utf-8"))
+    textarea.insert(END,f"\nyou> {msg}")
+    textarea.see(END)
+    text_msg.delete(0,END)
+    
+
+def get_file_size(file_name):
+    with open(file_name,'rb') as file:
+        chunk=file.read()
+        return len(chunk)
+
+def browseFiles():
+    pass
 
 def recv_message():
     global SERVER,BUFFER_SIZE,textarea,list_box
@@ -62,7 +86,7 @@ def disconnectWithClient():
 
 
 def openChatWindow():
-    global primary_font,name,list_box,textarea
+    global primary_font,name,list_box,textarea,text_msg
     window=Tk()
     window.title("Messenger")
     window.geometry("500x350")
@@ -119,7 +143,7 @@ def openChatWindow():
     text_msg=Entry(window,width=43,font=primary_font)
     text_msg.place(x=110,y=300)
 
-    send_btn=Button(window,text='Send',font=primary_font,bd=1)
+    send_btn=Button(window,text='Send',font=primary_font,bd=1,command=send_message)
     send_btn.place(x=450,y=300)
 
 
