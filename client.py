@@ -15,7 +15,9 @@ IP_ADDRESS = '127.0.0.1'
 SERVER = None
 BUFFER_SIZE = 4096
 
+filePathLabel=None
 sending_file=None
+downloading_file=None
 name=None
 textarea=None
 labelchat=None
@@ -24,13 +26,53 @@ mainWindow=None
 text_msg=None
 primary_font=("calibri",10)
 
+def browse_files():
+    global filePathLabel,textarea
+
+    try:
+        filename=filedialog.askopenfilename()
+
+        filePathLabel.configure(text=filename)
+
+        HOSTNAME='127.0.0.1'
+        USERNAME='lftpd'
+        PASSWORD='lftpd'
+        
+        ftp_server=FTP(HOSTNAME,USERNAME,PASSWORD)
+        ftp_server.encoding='utf-8'
+
+        ftp_server.cwd('shared_files')
+        fname=ntpath.basename(filename)
+
+        with open(filename,'rb') as file:
+            ftp_server.storbinary(f'STOR {fname}',file)
+            ftp_server.dir()
+            ftp_server.quit()
+
+        msg='send'+fname
+
+        if msg[:4]=='send':
+            print("please wait")
+            textarea.insert(END,'+\n','please wait')
+            textarea.see(END)
+            
+            sending_file=msg[5:]
+            file_size=get_file_size('shared-files/'+sending_file)
+            final_msg=msg+''+str(file_size)
+            SERVER.send(final_msg.encode("utf-8"))
+            textarea.insert(END,'In Process')
+
+    except FileNotFoundError:
+        print("Cancel Button pressed")
+    
+
 
 def send_message():
     global text_msg,SERVER,textarea
-    msg=text_msg.get()
+    msg_to_send=text_msg.get()
 
-    SERVER.send(msg.encode("utf-8"))
-    textarea.insert(END,f"\nyou> {msg}")
+    SERVER.send(msg_to_send.encode("utf-8"))
+    textarea.insert(END,f"\nyou> {msg_to_send}")
     textarea.see(END)
     text_msg.delete(0,END)
     
@@ -86,7 +128,7 @@ def disconnectWithClient():
 
 
 def openChatWindow():
-    global primary_font,name,list_box,textarea,text_msg
+    global primary_font,name,list_box,textarea,text_msg,filePathLabel
     window=Tk()
     window.title("Messenger")
     window.geometry("500x350")
@@ -137,7 +179,7 @@ def openChatWindow():
     scroll_bar2.config(command=textarea.yview)
 
 
-    attach_btn=Button(window,text='Attach and Send',font=primary_font,bd=1)
+    attach_btn=Button(window,text='Attach and Send',font=primary_font,bd=1,command=browse_files)
     attach_btn.place(x=10,y=300)
 
     text_msg=Entry(window,width=43,font=primary_font)
@@ -146,7 +188,8 @@ def openChatWindow():
     send_btn=Button(window,text='Send',font=primary_font,bd=1,command=send_message)
     send_btn.place(x=450,y=300)
 
-
+    filePathLabel=Label(window,text='',font=primary_font,fg='blue')
+    filePathLabel.place(x=10,y=330)
 
     window.mainloop()
 

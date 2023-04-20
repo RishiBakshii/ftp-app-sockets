@@ -4,6 +4,7 @@ from  threading import Thread
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
+import os
 
 
 IP_ADDRESS = '127.0.0.1'
@@ -13,6 +14,43 @@ PORT = 8080   #1024 min
 SERVER = None
 clients = {}
 BUFFER_SIZE=4096
+
+is_dir_exist=os.path.isdir('shared_files')
+
+if not is_dir_exist:
+    os.makedirs('shared_files')
+
+def grantAccess(client_name):
+    global clients
+    other_client_name=clients[client_name]['connected_with']
+    other_client_socket=clients[other_client_name]['client']
+
+    msg='Access Granted'
+    other_client_socket.send(msg.encode("utf-8"))
+
+def declineAccess(client_name):
+    global clients
+    other_client_name=clients[client_name]['connected_with']
+    other_client_socket=clients[other_client_name]['client']
+
+    msg=f'{client_name} declined your request'
+    other_client_socket.send(msg.encode("utf-8"))
+
+
+def ftp():
+    global IP_ADDRESS
+
+    authoriser=DummyAuthorizer()
+    authoriser.add_user('lftpd','lftpd','.',perm='elradfmw')
+
+    handler=FTPHandler
+    handler.authorizer=authoriser
+
+    ftp_server=FTPServer((IP_ADDRESS,21),handler=handler)
+    ftp_server.serve_forever()
+
+
+
 
 def send_textmsg(client,msg):
     global clients
@@ -92,18 +130,21 @@ def handle_show_list(client):
         client.send(msg.encode("utf-8"))
 
 def handle_messages(client,msg,client_name):
-    print(msg)
     if msg=='show list':
         handle_show_list(client)
     elif msg[:7]=='connect':
         connect_client(msg,client,client_name)
     elif msg[:10]=='disconnect':
         disconnect_client(msg,client,client_name)
+    elif msg[:4]=='send':
+        file_name=msg.split(' ')[1]
+        file_size=msg.split(' ')[2]
+        print(file_name,file_size)
     else:
         connected=clients[client_name]['connected_with']
         if connected:
             print(connected,'connected')
-            send_textmsg(client,msg)
+            send_textmsg(client_name,msg)
         else:
             handle_error_message(client)
 
@@ -169,4 +210,5 @@ def setup():
 setup_thread = Thread(target=setup)           #receiving multiple messages
 setup_thread.start()
 
-# ------ Bolierplate Code End -----------
+ftp_thread=Thread(target=ftp)
+ftp_thread.start()
