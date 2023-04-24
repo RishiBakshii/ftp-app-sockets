@@ -49,18 +49,22 @@ def browse_files():
             ftp_server.dir()
             ftp_server.quit()
 
-        msg='send'+fname
+        msg=f'send {fname}'
+        print(msg)
 
         if msg[:4]=='send':
             print("please wait")
-            textarea.insert(END,'+\n','please wait')
+            textarea.insert(END,'\nplease wait')
             textarea.see(END)
             
             sending_file=msg[5:]
-            file_size=get_file_size('shared-files/'+sending_file)
-            final_msg=msg+''+str(file_size)
+            file_size=get_file_size('shared_files/'+sending_file)
+            final_msg=f'{msg} {file_size}'
+
+            print(final_msg)
+
             SERVER.send(final_msg.encode("utf-8"))
-            textarea.insert(END,'In Process')
+            textarea.insert(END,'\nIn Process')
 
     except FileNotFoundError:
         print("Cancel Button pressed")
@@ -86,7 +90,7 @@ def browseFiles():
     pass
 
 def recv_message():
-    global SERVER,BUFFER_SIZE,textarea,list_box
+    global SERVER,BUFFER_SIZE,textarea,list_box,labelchat
     while True:
         chunk=SERVER.recv(BUFFER_SIZE)
         try:
@@ -94,6 +98,28 @@ def recv_message():
                 letter_list=chunk.decode('utf-8').split(',')
                 print(letter_list)
                 list_box.insert(letter_list[0],letter_list[0]+":"+letter_list[1]+ ':' + letter_list[3])
+
+            elif chunk.decode('utf-8')=='Access Granted':
+                print('working!!!!!!!!!!!!!!!!!!!!!!!!!')
+
+                labelchat.configure(text='')
+                textarea.insert(END,'\n'+chunk.decode('utf-8'))
+                textarea.see('end')
+
+            elif chunk.decode('utf-8')=='declined your request':
+                labelchat.configure(text='')
+                textarea.insert(END,chunk.decode('utf-8'))
+                textarea.see('end')
+            
+            elif 'download' in chunk.decode('utf-8'):
+                print(chunk.decode('utf-8').split(' '))
+                downloading_file=chunk.decode().split(' ')[6]
+                buffer_size=chunk.decode().split(' ')[10]
+                print(downloading_file,buffer_size)
+
+                textarea.insert(END,f'{downloading_file} {buffer_size}')
+                textarea.see('end')
+            
             else:
                 textarea.insert(END,"\n"+chunk.decode('ascii'))
                 textarea.see('end')
@@ -128,7 +154,7 @@ def disconnectWithClient():
 
 
 def openChatWindow():
-    global primary_font,name,list_box,textarea,text_msg,filePathLabel
+    global primary_font,name,list_box,textarea,text_msg,filePathLabel,labelchat
     window=Tk()
     window.title("Messenger")
     window.geometry("500x350")

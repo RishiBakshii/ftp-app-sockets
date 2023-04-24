@@ -5,6 +5,7 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 import os
+import time
 
 
 IP_ADDRESS = '127.0.0.1'
@@ -27,6 +28,25 @@ def grantAccess(client_name):
 
     msg='Access Granted'
     other_client_socket.send(msg.encode("utf-8"))
+
+
+def handleSentFile(filename,filesize,client_name):
+    global clients
+
+    clients[client_name]['file_name']=filename
+    clients[client_name]['file_size']=filesize
+
+    other_client_name=clients[client_name]['connected_with']
+    other_client_socket=clients[other_client_name]['client']
+
+    msg=f'{client_name} wants to send the file {filename} with file size {filesize} do you want to download yes or no?'
+    other_client_socket.send(msg.encode("utf-8"))
+    time.sleep(1)
+
+    msg_donwload=f'Download : {filename}'
+    other_client_socket.send(msg_donwload.encode("utf-8"))
+
+
 
 def declineAccess(client_name):
     global clients
@@ -136,10 +156,22 @@ def handle_messages(client,msg,client_name):
         connect_client(msg,client,client_name)
     elif msg[:10]=='disconnect':
         disconnect_client(msg,client,client_name)
+
     elif msg[:4]=='send':
         file_name=msg.split(' ')[1]
         file_size=msg.split(' ')[2]
-        print(file_name,file_size)
+
+        print(file_name,file_size,client_name)
+
+        handleSentFile(file_name,file_size,client_name)
+
+
+    elif msg=='y' or msg=='yes':
+        print('calling functions acces granted')
+        grantAccess(client_name)
+    elif msg=='n' or msg=='no':
+        declineAccess(client_name)
+
     else:
         connected=clients[client_name]['connected_with']
         if connected:
